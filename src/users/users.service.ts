@@ -18,7 +18,9 @@ export class UsersService {
   getUsers() {
     return this.usersRepository.find();
   }
-
+  comparePassword(password: string, confirmPassword: string): boolean {
+    return password === confirmPassword;
+  }
   async signUp(user: CreateUserDto) {
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -28,30 +30,39 @@ export class UsersService {
       const userDb = await this.usersRepository.findOne({
         where: { email: user.email },
       });
-
+      // Checking if user already exists
       if (userDb) {
         throw new BadRequestException('El email ya se encuentra registrado.');
       }
+      // Password comparison
+      if (!this.comparePassword(user.password, user.confirmPassword)) {
+        throw new BadRequestException('Las contraseñas no coinciden');
+      }
+      // Hashing password
       const hashedPassword: string = await bcrypt.hash(user.password, 10);
       if (!hashedPassword) {
         throw new BadRequestException(
           'Se generó un error al encriptar la contraseña',
         );
       }
+      // Change password > hashedPassword
       const newUser = this.usersRepository.create({
         ...user,
         password: hashedPassword,
       });
+      // Save user in database
       await queryRunner.manager.save(newUser);
-
       await queryRunner.commitTransaction();
-
+      // Return only userWithoutPassword
       const {
         password: ignoredPassword,
         confirmPassword: ignoredConfirmPassword,
         ...userWithoutPassword
       } = user;
-      return userWithoutPassword;
+      return {
+        message: 'Usuario registrado exitosamente',
+        user: userWithoutPassword,
+      };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
