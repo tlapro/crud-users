@@ -1,4 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { v4 as uuid } from 'uuid';
 @Entity({
   name: 'users',
@@ -14,6 +19,9 @@ export class User {
   email: string;
 
   @Column()
+  password: string;
+
+  @Column()
   birthdate: Date;
 
   @Column()
@@ -24,4 +32,13 @@ export class User {
 
   @Column()
   country: string;
+
+  @Column({ default: 2 })
+  role: number;
+
+  @Column({ default: true })
+  isActive: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }
