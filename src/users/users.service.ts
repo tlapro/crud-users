@@ -7,6 +7,8 @@ import { User } from './entities/users.entity';
 import { DataSource, Repository } from 'typeorm';
 import { CreateUserDto } from './dtos/CreateUser.dto';
 import * as bcrypt from 'bcrypt';
+import { LoginUserDto } from './dtos/LoginUser.dto';
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -55,6 +57,37 @@ export class UsersService {
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  async signIn(credentials: LoginUserDto) {
+    try {
+      const user = await this.usersRepository.findOne({
+        where: { email: credentials.email },
+      });
+
+      if (!user) {
+        throw new BadRequestException(
+          'No existe una cuenta asociada a ese email.',
+        );
+      }
+
+      const isValid = await bcrypt.compare(
+        credentials.password,
+        user?.password,
+      );
+
+      if (!isValid) {
+        throw new BadRequestException('Usuario o contraseña incorrectos.');
+      }
+
+      const { password: ignoredPassword, ...userWithoutPassword } = user;
+
+      return { message: 'Login exitoso', user: userWithoutPassword };
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Ocurrió un error en el login.',
+      );
     }
   }
 }
