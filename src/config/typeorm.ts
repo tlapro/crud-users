@@ -14,7 +14,7 @@ const config = {
   password: process.env.DB_PASSWORD,
   autoLoadEntities: true,
   synchronize: true,
-  logging: true,
+  logging: ['errors'],
   entities: [User],
   dropSchema: true,
 };
