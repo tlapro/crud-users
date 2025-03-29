@@ -52,6 +52,9 @@ export class CreateUserDto {
   })
   city: string;
 
+  @IsEmpty()
+  imgUrl: string;
+
   @IsString()
   @IsNotEmpty()
   country: string;

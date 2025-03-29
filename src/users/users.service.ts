@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/users.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -159,7 +163,7 @@ export class UsersService {
     await queryRunner.startTransaction();
     try {
       // Search user
-      const user = await this.usersRepository.findOne({ where: { id: id } });
+      const user = await this.usersRepository.findOne({ where: { id } });
       if (!user) {
         throw new BadRequestException(
           'No se encontro ningún usuario que actualizar.',
@@ -169,7 +173,12 @@ export class UsersService {
 
       await queryRunner.manager.update(User, { id }, updatedUser);
       await queryRunner.commitTransaction();
-      const { password: ignorePassword, ...userWithoutPassword } = updatedUser;
+      const {
+        password: ignorePassword,
+        role: ignoredRole,
+        isActive: ignoredisActive,
+        ...userWithoutPassword
+      } = updatedUser;
       return {
         message: 'Datos actualizados con éxito',
         user: userWithoutPassword,
@@ -178,6 +187,34 @@ export class UsersService {
       await queryRunner.rollbackTransaction();
       throw new BadRequestException(
         error.message || 'Ocurrió un error al actualizar el usuario',
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+  async deleteUser(id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = await this.usersRepository.findOne({ where: { id } });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado.');
+      }
+
+      const newEmail = `${user.email}-deleted-${Date.now()}`;
+
+      await queryRunner.manager.update(User, id, {
+        isActive: false,
+        email: newEmail,
+      });
+      await queryRunner.commitTransaction();
+      return { message: 'Cuenta eliminada con éxito' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(
+        error.message || 'Error al eliminar el usuario.',
       );
     } finally {
       await queryRunner.release();

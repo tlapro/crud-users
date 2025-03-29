@@ -33,6 +33,9 @@ export class User {
   @Column()
   country: string;
 
+  @Column({ nullable: true, default: null })
+  imgUser: string;
+
   @Column({ default: 2 })
   role: number;
 

@@ -1,14 +1,15 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   ParseUUIDPipe,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dtos/UpdateUser.dto';
+import { AuthGuard } from 'src/guards/auth.guard';
 
 @Controller('users')
 export class UsersController {
@@ -20,6 +21,7 @@ export class UsersController {
   }
 
   @Put('update-data/:id')
+  @UseGuards(AuthGuard)
   updateUser(
     @Body() userNewData: UpdateUserDto,
     @Param('id', ParseUUIDPipe) id: string,
@@ -27,13 +29,13 @@ export class UsersController {
     return this.usersService.updateUser(userNewData, id);
   }
 
-  @Delete('delete-user')
-  deleteUser() {
-    return 'Este endpoint va a eliminar un usuario (inactivarlo)';
+  @Put('delete-user/:id')
+  deleteUser(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.deleteUser(id);
   }
 
   @Get(':id')
-  getUserById() {
-    return 'Este endpoint devolvera un usuario buscado por id.';
+  getUserById(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.getUserById(id);
   }
 }

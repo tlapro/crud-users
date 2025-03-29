@@ -33,7 +33,7 @@ export class AuthGuard implements CanActivate {
         'Invalid authorization header format. Expected "Bearer <token>".',
       );
     }
-    const token = parts[2];
+    const token = parts[1];
     try {
       const secret = process.env.JWT_SECRET;
       this.jwtService.verify(token, { secret });
