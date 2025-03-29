@@ -48,6 +48,13 @@ export class UsersController {
     return this.usersService.getUserById(id);
   }
 
+  @Put('changerol/:id')
+  @Roles(Rol.Admin)
+  @UseGuards(AuthGuard, RolesGuard)
+  changeRol(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.changeRol(id);
+  }
+
   @Post('profile/image/:id')
   @UseInterceptors(FileInterceptor('image'))
   @UseGuards(AuthGuard)

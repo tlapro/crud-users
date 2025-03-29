@@ -255,7 +255,28 @@ export class UsersService {
       await queryRunner.release();
     }
   }
-
+  async changeRol(id: string) {
+    try {
+      const user = await this.usersRepository.findOne({
+        where: { id },
+        relations: ['roles'],
+      });
+      // Conditional to change rol
+      const newRoleId = user?.roles?.name === 'user' ? '2' : '1';
+      const newRole = await this.rolesRepository.findOne({
+        where: { id: newRoleId },
+      });
+      if (!newRole) {
+        throw new Error('Role not found');
+      }
+      await this.usersRepository.update(id, { roles: newRole });
+      return { message: 'Rol modificado con éxito', newRole };
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Ocurrió un error al actualizar el rol del usuario.',
+      );
+    }
+  }
   async postImage(file: Express.Multer.File, id: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
