@@ -99,7 +99,7 @@ export class UsersService {
         email: user.email,
         role: user.role,
       };
-      const token = this.jwtService.signAsync(userPayload);
+      const token = await this.jwtService.signAsync(userPayload);
       const { password: ignoredPassword, ...userWithoutPassword } = user;
 
       return { message: 'Login exitoso', user: userWithoutPassword, token };
