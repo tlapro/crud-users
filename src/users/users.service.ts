@@ -8,11 +8,13 @@ import { DataSource, Repository } from 'typeorm';
 import { CreateUserDto } from './dtos/CreateUser.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginUserDto } from './dtos/LoginUser.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private usersRepository: Repository<User>,
+    private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
   ) {}
   getUsers() {
@@ -91,10 +93,16 @@ export class UsersService {
       if (!isValid) {
         throw new BadRequestException('Usuario o contraseña incorrectos.');
       }
-
+      const userPayload = {
+        sub: user.id,
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      };
+      const token = this.jwtService.signAsync(userPayload);
       const { password: ignoredPassword, ...userWithoutPassword } = user;
 
-      return { message: 'Login exitoso', user: userWithoutPassword };
+      return { message: 'Login exitoso', user: userWithoutPassword, token };
     } catch (error) {
       throw new BadRequestException(
         error.message || 'Ocurrió un error en el login.',
