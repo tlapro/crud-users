@@ -1,5 +1,14 @@
-import { Controller, Delete, Get, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Put,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
+import { UpdateUserDto } from './dtos/UpdateUser.dto';
 
 @Controller('users')
 export class UsersController {
@@ -10,9 +19,12 @@ export class UsersController {
     return this.usersService.getUsers();
   }
 
-  @Put('update-data')
-  updateUser() {
-    return 'Este endpoint va a actualizar los datos de un usuario';
+  @Put('update-data/:id')
+  updateUser(
+    @Body() userNewData: UpdateUserDto,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.usersService.updateUser(userNewData, id);
   }
 
   @Delete('delete-user')

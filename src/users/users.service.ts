@@ -9,6 +9,7 @@ import { CreateUserDto } from './dtos/CreateUser.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginUserDto } from './dtos/LoginUser.dto';
 import { JwtService } from '@nestjs/jwt';
+import { UpdateUserDto } from './dtos/UpdateUser.dto';
 
 @Injectable()
 export class UsersService {
@@ -18,11 +19,42 @@ export class UsersService {
     private readonly dataSource: DataSource,
   ) {}
   getUsers() {
-    return this.usersRepository.find();
+    try {
+      return this.usersRepository.find();
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Ocurrió un error al obtener los usuarios.',
+      );
+    }
   }
+
+  async getUserById(
+    id: string,
+  ): Promise<Omit<User, 'password' | 'role' | 'isActive'>> {
+    try {
+      const user = await this.usersRepository.findOne({ where: { id: id } });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado');
+      }
+      const {
+        password: ignoredPassword,
+        role: ignoredRole,
+        isActive: ignoredisActive,
+        ...userWithoutPassword
+      } = user;
+      return userWithoutPassword;
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Ocurrió un error en el login.',
+      );
+    }
+  }
+
   comparePassword(password: string, confirmPassword: string): boolean {
     return password === confirmPassword;
   }
+
   async signUp(user: CreateUserDto) {
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -59,6 +91,8 @@ export class UsersService {
       const {
         password: ignoredPassword,
         confirmPassword: ignoredConfirmPassword,
+        role: ignoredRole,
+        isActive: ignoredisActive,
         ...userWithoutPassword
       } = user;
       return {
@@ -84,6 +118,11 @@ export class UsersService {
           'No existe una cuenta asociada a ese email.',
         );
       }
+      if (!user.isActive) {
+        throw new BadRequestException(
+          'No existe una cuenta asociada a ese email.',
+        );
+      }
 
       const isValid = await bcrypt.compare(
         credentials.password,
@@ -100,13 +139,48 @@ export class UsersService {
         role: user.role,
       };
       const token = await this.jwtService.signAsync(userPayload);
-      const { password: ignoredPassword, ...userWithoutPassword } = user;
+      const {
+        password: ignoredPassword,
+        role: ignoredRole,
+        isActive: ignoredisActive,
+        ...userWithoutPassword
+      } = user;
 
       return { message: 'Login exitoso', user: userWithoutPassword, token };
     } catch (error) {
       throw new BadRequestException(
         error.message || 'Ocurrió un error en el login.',
       );
+    }
+  }
+
+  async updateUser(userNewData: UpdateUserDto, id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+    try {
+      // Search user
+      const user = await this.usersRepository.findOne({ where: { id: id } });
+      if (!user) {
+        throw new BadRequestException(
+          'No se encontro ningún usuario que actualizar.',
+        );
+      }
+      const updatedUser = { ...user, ...userNewData };
+
+      await queryRunner.manager.update(User, { id }, updatedUser);
+      await queryRunner.commitTransaction();
+      const { password: ignorePassword, ...userWithoutPassword } = updatedUser;
+      return {
+        message: 'Datos actualizados con éxito',
+        user: userWithoutPassword,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(
+        error.message || 'Ocurrió un error al actualizar el usuario',
+      );
+    } finally {
+      await queryRunner.release();
     }
   }
 }
