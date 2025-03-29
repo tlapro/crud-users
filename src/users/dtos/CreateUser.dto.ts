@@ -8,6 +8,7 @@ import {
   Matches,
   MinLength,
 } from 'class-validator';
+import { Role } from '../entities/role.entity';
 
 export class CreateUserDto {
   @IsEmpty()
@@ -60,7 +61,7 @@ export class CreateUserDto {
   country: string;
 
   @IsEmpty()
-  role: number;
+  roles: Role;
 
   @IsEmpty()
   isActive: boolean;

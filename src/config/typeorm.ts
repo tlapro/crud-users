@@ -1,5 +1,6 @@
 import { registerAs } from '@nestjs/config';
 import { config as dotenvConfig } from 'dotenv';
+import { Role } from 'src/users/entities/role.entity';
 import { User } from 'src/users/entities/users.entity';
 import { DataSource, DataSourceOptions } from 'typeorm';
 
@@ -15,8 +16,8 @@ const config = {
   autoLoadEntities: true,
   synchronize: true,
   logging: ['errors'],
-  entities: [User],
-  // dropSchema: true,
+  entities: [User, Role],
+  dropSchema: true,
 };
 export default registerAs('typeorm', () => config);
 export const connectionSource = new DataSource(config as DataSourceOptions);

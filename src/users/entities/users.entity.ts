@@ -2,15 +2,18 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { v4 as uuid } from 'uuid';
+import { Role } from './role.entity';
+
 @Entity({
   name: 'users',
 })
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string = uuid();
+  id: string;
 
   @Column()
   name: string;
@@ -36,8 +39,9 @@ export class User {
   @Column({ nullable: true, default: null })
   imgUser: string;
 
-  @Column({ default: 2 })
-  role: number;
+  @ManyToOne(() => Role)
+  @JoinColumn({ name: 'role_id' })
+  roles: Role;
 
   @Column({ default: true })
   isActive: boolean;

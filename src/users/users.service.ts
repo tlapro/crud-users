@@ -16,18 +16,25 @@ import { JwtService } from '@nestjs/jwt';
 import { UpdateUserDto } from './dtos/UpdateUser.dto';
 import { CloudinaryService } from 'src/common/cloudinary.service';
 import { UploadApiResponse } from 'cloudinary';
+import { Rol } from 'src/common/roles.enum';
+import { Role } from './entities/role.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User) private usersRepository: Repository<User>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+    @InjectRepository(Role)
+    private rolesRepository: Repository<Role>,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
   getUsers() {
     try {
-      return this.usersRepository.find();
+      return this.usersRepository.find({
+        relations: ['roles'],
+      });
     } catch (error) {
       throw new BadRequestException(
         error.message || 'Ocurrió un error al obtener los usuarios.',
@@ -37,7 +44,7 @@ export class UsersService {
 
   async getUserById(
     id: string,
-  ): Promise<Omit<User, 'password' | 'role' | 'isActive'>> {
+  ): Promise<Omit<User, 'password' | 'roles' | 'isActive'>> {
     try {
       const user = await this.usersRepository.findOne({ where: { id: id } });
 
@@ -46,7 +53,7 @@ export class UsersService {
       }
       const {
         password: ignoredPassword,
-        role: ignoredRole,
+        roles: ignoredRoles,
         isActive: ignoredisActive,
         ...userWithoutPassword
       } = user;
@@ -79,6 +86,12 @@ export class UsersService {
       if (!this.comparePassword(user.password, user.confirmPassword)) {
         throw new BadRequestException('Las contraseñas no coinciden');
       }
+      const role = await this.rolesRepository.findOne({
+        where: { name: Rol.User },
+      });
+      if (!role) {
+        throw new Error('Role not found');
+      }
       // Hashing password
       const hashedPassword: string = await bcrypt.hash(user.password, 10);
       if (!hashedPassword) {
@@ -90,6 +103,7 @@ export class UsersService {
       const newUser = this.usersRepository.create({
         ...user,
         password: hashedPassword,
+        roles: role,
       });
       // Save user in database
       await queryRunner.manager.save(newUser);
@@ -98,7 +112,7 @@ export class UsersService {
       const {
         password: ignoredPassword,
         confirmPassword: ignoredConfirmPassword,
-        role: ignoredRole,
+        roles: ignoredRole,
         isActive: ignoredisActive,
         ...userWithoutPassword
       } = user;
@@ -143,12 +157,12 @@ export class UsersService {
         sub: user.id,
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: user.roles,
       };
       const token = await this.jwtService.signAsync(userPayload);
       const {
         password: ignoredPassword,
-        role: ignoredRole,
+        roles: ignoredRoles,
         isActive: ignoredisActive,
         ...userWithoutPassword
       } = user;
@@ -178,7 +192,7 @@ export class UsersService {
       await queryRunner.commitTransaction();
       const {
         password: ignorePassword,
-        role: ignoredRole,
+        roles: ignoredRoles,
         isActive: ignoredisActive,
         ...userWithoutPassword
       } = updatedUser;
