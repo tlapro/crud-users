@@ -14,6 +14,8 @@ import * as bcrypt from 'bcrypt';
 import { LoginUserDto } from './dtos/LoginUser.dto';
 import { JwtService } from '@nestjs/jwt';
 import { UpdateUserDto } from './dtos/UpdateUser.dto';
+import { CloudinaryService } from 'src/common/cloudinary.service';
+import { UploadApiResponse } from 'cloudinary';
 
 @Injectable()
 export class UsersService {
@@ -21,6 +23,7 @@ export class UsersService {
     @InjectRepository(User) private usersRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
   getUsers() {
     try {
@@ -215,6 +218,45 @@ export class UsersService {
       await queryRunner.rollbackTransaction();
       throw new InternalServerErrorException(
         error.message || 'Error al eliminar el usuario.',
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async postImage(file: Express.Multer.File, id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = await queryRunner.manager.findOne(User, { where: { id } });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado');
+      }
+      // Upload image to cloudinary
+      const uploadedImage = await this.cloudinaryService.uploadImage(file);
+      if (!uploadedImage) {
+        throw new BadRequestException(
+          'Hubo un error al subir la imagen a la nube.',
+        );
+      }
+      // Conditional message if user has already a profile picture
+      const message =
+        user.imgUser !== null
+          ? 'Imagen actualizada correctamente'
+          : 'Imagen subida correctamente';
+      // Updating user in database
+      await queryRunner.manager.update(User, id, {
+        imgUser: uploadedImage.url,
+      });
+      await queryRunner.commitTransaction();
+      // return object
+      return { message, imgUrl: uploadedImage.url };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(
+        error.message || 'Error al actualizar la imagen de usuario.',
       );
     } finally {
       await queryRunner.release();
