@@ -25,8 +25,8 @@ export class SeedsService implements OnModuleInit {
       if (!existingRole) {
         const role = this.rolesRepository.create({ name: roleName });
         await this.rolesRepository.save(role);
-        console.log(`Role ${roleName} created.`);
       }
     }
+    console.log(`[Seeder] - Successfully created roles.`);
   }
 }

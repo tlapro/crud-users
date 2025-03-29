@@ -17,7 +17,7 @@ const config = {
   synchronize: true,
   logging: ['errors'],
   entities: [User, Role],
-  dropSchema: true,
+  // dropSchema: true,
 };
 export default registerAs('typeorm', () => config);
 export const connectionSource = new DataSource(config as DataSourceOptions);

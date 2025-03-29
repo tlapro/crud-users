@@ -42,7 +42,24 @@ export class UsersService {
     }
   }
 
-  async getUserById(
+  async getUserById(id: string): Promise<User> {
+    try {
+      const user = await this.usersRepository.findOne({
+        where: { id: id },
+        relations: ['roles'],
+      });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado');
+      }
+      return user;
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Ocurrió un error en la búsqueda del usuario.',
+      );
+    }
+  }
+  async getUserProfile(
     id: string,
   ): Promise<Omit<User, 'password' | 'roles' | 'isActive'>> {
     try {
@@ -132,6 +149,7 @@ export class UsersService {
     try {
       const user = await this.usersRepository.findOne({
         where: { email: credentials.email },
+        relations: ['roles'],
       });
 
       if (!user) {
@@ -157,7 +175,7 @@ export class UsersService {
         sub: user.id,
         id: user.id,
         email: user.email,
-        role: user.roles,
+        role: user.roles.name,
       };
       const token = await this.jwtService.signAsync(userPayload);
       const {
