@@ -25,8 +25,8 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @Roles()
-  @UseGuards(AuthGuard, RolesGuard)
+  // @Roles(Rol.Admin)
+  // @UseGuards(AuthGuard, RolesGuard)
   getUsers() {
     return this.usersService.getUsers();
   }
@@ -81,6 +81,13 @@ export class UsersController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.usersService.postImage(file, id);
+  }
+
+  @ApiBearerAuth()
+  @Put('profile/deleteimage/:id')
+  @UseGuards(AuthGuard)
+  putImage(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.putImage(id);
   }
 
   @Get('/profile/:id')

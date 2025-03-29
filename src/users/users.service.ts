@@ -340,4 +340,26 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
+  async putImage(id: string) {
+    try {
+      const user = await this.getUserById(id);
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado');
+      }
+      if (user.imgUser === 'https://i.imgur.com/fEtaWXr.png') {
+        throw new BadRequestException(
+          'No tienes una imagen de perfil que eliminar.',
+        );
+      }
+      await this.usersRepository.update(id, {
+        imgUser: 'https://i.imgur.com/fEtaWXr.png',
+      });
+      return { message: 'La imagen ha sido eliminada con éxito.' };
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || ' Ocurrió un error al eliminar la imagen',
+      );
+    }
+  }
 }

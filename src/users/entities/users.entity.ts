@@ -36,7 +36,7 @@ export class User {
   @Column()
   country: string;
 
-  @Column({ nullable: true, default: null })
+  @Column({ default: 'https://i.imgur.com/fEtaWXr.png' })
   imgUser: string;
 
   @ManyToOne(() => Role)
