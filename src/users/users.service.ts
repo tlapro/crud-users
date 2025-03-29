@@ -255,6 +255,31 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
+  async deleteDbUser(id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = await this.usersRepository.findOne({ where: { id } });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado.');
+      }
+
+      await queryRunner.manager.delete(User, id);
+      await queryRunner.commitTransaction();
+      return { message: 'Cuenta eliminada de la base de datos con éxito' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(
+        error.message || 'Error al eliminar de la base de datos al usuario.',
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   async changeRol(id: string) {
     try {
       const user = await this.usersRepository.findOne({

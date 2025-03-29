@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -17,16 +18,20 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Roles } from 'src/decorators/roles.decorator';
 import { Rol } from 'src/common/roles.enum';
 import { RolesGuard } from 'src/guards/role.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  @Roles()
+  @UseGuards(AuthGuard, RolesGuard)
   getUsers() {
     return this.usersService.getUsers();
   }
 
+  @ApiBearerAuth()
   @Put('update-data/:id')
   @UseGuards(AuthGuard)
   updateUser(
@@ -36,11 +41,22 @@ export class UsersController {
     return this.usersService.updateUser(userNewData, id);
   }
 
+  @ApiBearerAuth()
   @Put('delete-user/:id')
+  @UseGuards(AuthGuard)
   deleteUser(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.deleteUser(id);
   }
 
+  @ApiBearerAuth()
+  @Delete('delete-dbuser/:id')
+  @Roles(Rol.Admin)
+  @UseGuards(AuthGuard, RolesGuard)
+  deleteDbUser(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.deleteDbUser(id);
+  }
+
+  @ApiBearerAuth()
   @Get(':id')
   @Roles(Rol.Admin)
   @UseGuards(AuthGuard, RolesGuard)
@@ -48,6 +64,7 @@ export class UsersController {
     return this.usersService.getUserById(id);
   }
 
+  @ApiBearerAuth()
   @Put('changerol/:id')
   @Roles(Rol.Admin)
   @UseGuards(AuthGuard, RolesGuard)
@@ -55,6 +72,7 @@ export class UsersController {
     return this.usersService.changeRol(id);
   }
 
+  @ApiBearerAuth()
   @Post('profile/image/:id')
   @UseInterceptors(FileInterceptor('image'))
   @UseGuards(AuthGuard)
@@ -66,6 +84,7 @@ export class UsersController {
   }
 
   @Get('/profile/:id')
+  @UseGuards(AuthGuard)
   getUserProfile(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.getUserProfile(id);
   }
