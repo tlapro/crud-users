@@ -24,6 +24,7 @@ import { RolesGuard } from 'src/guards/role.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UpdateUserAdminDto } from './dtos/UpdateUserAdmin.dto';
 import { UpdateUserPassword } from './dtos/UpdateUserPassword..dto';
+import { AdminChangePassword } from './dtos/AdminChangePassword.dto';
 
 @Controller('users')
 export class UsersController {
@@ -37,7 +38,7 @@ export class UsersController {
   }
 
   @ApiBearerAuth()
-  @Put('changue-password/:id')
+  @Put('change-password/:id')
   @UseGuards(AuthGuard)
   changePassword(
     @Req() req,
@@ -50,6 +51,22 @@ export class UsersController {
       );
     }
     return this.usersService.changePassword(userUpdatePassword, id);
+  }
+
+  @ApiBearerAuth()
+  @Put('changepw-admin/:id')
+  @UseGuards(AuthGuard)
+  changePasswordAdmin(
+    @Req() req,
+    @Body() newPasswordData: AdminChangePassword,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    if (req.user.id !== id) {
+      throw new UnauthorizedException(
+        'No tienes permiso para actualizar los datos de otro usuario.',
+      );
+    }
+    return this.usersService.changePasswordAdmin(newPasswordData, id);
   }
 
   @ApiBearerAuth()

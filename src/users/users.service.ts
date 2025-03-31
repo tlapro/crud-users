@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   BadRequestException,
   Injectable,
@@ -20,6 +19,7 @@ import { Role } from './entities/role.entity';
 import { MailService } from 'src/common/mail.service';
 import { UpdateUserAdminDto } from './dtos/UpdateUserAdmin.dto';
 import { UpdateUserPassword } from './dtos/UpdateUserPassword..dto';
+import { AdminChangePassword } from './dtos/AdminChangePassword.dto';
 
 @Injectable()
 export class UsersService {
@@ -210,11 +210,7 @@ export class UsersService {
       if (!user) {
         throw new BadRequestException('No se encontró el usuario.');
       }
-      if (user.id !== id) {
-        throw new BadRequestException(
-          'Ocurrió un error al actualizar la contraseña - Error de USER_ID',
-        );
-      }
+
       const isPasswordCorrect = await bcrypt.compare(
         userUpdatePassword.oldPassword,
         user.password,
@@ -237,6 +233,41 @@ export class UsersService {
         userUpdatePassword.newPassword,
         10,
       );
+      await queryRunner.manager.update(User, id, {
+        password: newPasswordHashed,
+      });
+
+      await queryRunner.commitTransaction();
+      return { message: 'Contraseña modificada con éxito.' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(
+        error.message || 'Ocurrió un error al cambiar la contraseña',
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async changePasswordAdmin(
+    newPasswordData: AdminChangePassword,
+    id: string,
+  ): Promise<{ message: string }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+    try {
+      const user = await queryRunner.manager.findOne(User, { where: { id } });
+
+      if (!user) {
+        throw new BadRequestException('No se encontró el usuario.');
+      }
+
+      if (newPasswordData.password !== newPasswordData.confirmPassword) {
+        throw new BadRequestException(
+          'La nueva contraseña y su confirmación no coinciden',
+        );
+      }
+      const newPasswordHashed = await bcrypt.hash(newPasswordData.password, 10);
       await queryRunner.manager.update(User, id, {
         password: newPasswordHashed,
       });
@@ -412,6 +443,7 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
   async deleteDbUser(id: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
