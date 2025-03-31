@@ -268,11 +268,13 @@ export class UsersService {
     try {
       const user = await this.usersRepository.findOne({ where: { id } });
 
-      if (!user) {
+      if (!user || !user.isActive) {
         throw new BadRequestException('Usuario no encontrado.');
       }
 
-      const newEmail = `${user.email}-deleted-${Date.now()}`;
+      const timestamp = Date.now();
+      const readableDate = new Date(timestamp).toISOString();
+      const newEmail = `${user.email}(/**deleted-${readableDate}**/)`;
 
       await queryRunner.manager.update(User, id, {
         isActive: false,
@@ -282,7 +284,7 @@ export class UsersService {
       return { message: 'Cuenta eliminada con éxito' };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(
+      throw new BadRequestException(
         error.message || 'Error al eliminar el usuario.',
       );
     } finally {
@@ -297,11 +299,14 @@ export class UsersService {
     try {
       const user = await this.usersRepository.findOne({ where: { id } });
 
-      if (!user) {
-        throw new BadRequestException('Usuario no encontrado.');
+      if (!user || !user.isActive) {
+        throw new BadRequestException(
+          'Usuario no encontrado o la cuenta ya se encuentra eliminada.',
+        );
       }
-
-      const newEmail = `${user.email}-deleted-${Date.now()}`;
+      const timestamp = Date.now();
+      const readableDate = new Date(timestamp).toISOString();
+      const newEmail = `${user.email}(/**deleted-${readableDate}**/)`;
 
       await queryRunner.manager.update(User, id, {
         isActive: false,
@@ -311,7 +316,7 @@ export class UsersService {
       return { message: 'Cuenta eliminada con éxito' };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw new InternalServerErrorException(
+      throw new BadRequestException(
         error.message || 'Error al eliminar el usuario.',
       );
     } finally {
@@ -319,6 +324,38 @@ export class UsersService {
     }
   }
 
+  async activeUserAdmin(id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = await this.usersRepository.findOne({ where: { id } });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado.');
+      }
+
+      if (user.isActive) {
+        throw new BadRequestException('La cuenta ya se encuentra activa.');
+      }
+
+      const oldEmail = user.email.split('(/**')[0];
+      // `${user.email}-deleted-${Date.now()}`
+      await queryRunner.manager.update(User, id, {
+        isActive: true,
+        email: oldEmail,
+      });
+      await queryRunner.commitTransaction();
+      return { message: 'Cuenta activada con éxito' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(
+        error.message || 'Error al activar el usuario.',
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
   async deleteDbUser(id: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();

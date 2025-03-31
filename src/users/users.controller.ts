@@ -69,6 +69,14 @@ export class UsersController {
   }
 
   @ApiBearerAuth()
+  @Put('active-admin/:id')
+  @Roles(Rol.Admin)
+  @UseGuards(AuthGuard, RolesGuard)
+  activeUserAdmin(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.activeUserAdmin(id);
+  }
+
+  @ApiBearerAuth()
   @Delete('delete-dbuser/:id')
   @Roles(Rol.Admin)
   @UseGuards(AuthGuard, RolesGuard)
