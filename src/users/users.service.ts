@@ -15,9 +15,9 @@ import { LoginUserDto } from './dtos/LoginUser.dto';
 import { JwtService } from '@nestjs/jwt';
 import { UpdateUserDto } from './dtos/UpdateUser.dto';
 import { CloudinaryService } from 'src/common/cloudinary.service';
-import { UploadApiResponse } from 'cloudinary';
 import { Rol } from 'src/common/roles.enum';
 import { Role } from './entities/role.entity';
+import { MailService } from 'src/common/mail.service';
 
 @Injectable()
 export class UsersService {
@@ -29,6 +29,7 @@ export class UsersService {
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly mailService: MailService,
   ) {}
   getUsers() {
     try {
@@ -124,6 +125,7 @@ export class UsersService {
       });
       // Save user in database
       await queryRunner.manager.save(newUser);
+      await this.mailService.sendRegistrationEmail(newUser.email);
       await queryRunner.commitTransaction();
       // Return only userWithoutPassword
       const {
