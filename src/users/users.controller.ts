@@ -19,6 +19,7 @@ import { Roles } from 'src/decorators/roles.decorator';
 import { Rol } from 'src/common/roles.enum';
 import { RolesGuard } from 'src/guards/role.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { UpdateUserAdminDto } from './dtos/UpdateUserAdmin.dto';
 
 @Controller('users')
 export class UsersController {
@@ -42,10 +43,29 @@ export class UsersController {
   }
 
   @ApiBearerAuth()
+  @Put('update-admin/:id')
+  @Roles(Rol.Admin)
+  @UseGuards(AuthGuard, RolesGuard)
+  updateAdmin(
+    @Body() userNewData: UpdateUserAdminDto,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.usersService.updateAdmin(userNewData, id);
+  }
+
+  @ApiBearerAuth()
   @Put('delete-user/:id')
   @UseGuards(AuthGuard)
   deleteUser(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.deleteUser(id);
+  }
+
+  @ApiBearerAuth()
+  @Put('delete-admin/:id')
+  @Roles(Rol.Admin)
+  @UseGuards(AuthGuard, RolesGuard)
+  deleteUserAdmin(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.deleteUserAdmin(id);
   }
 
   @ApiBearerAuth()

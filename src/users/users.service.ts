@@ -18,6 +18,7 @@ import { CloudinaryService } from 'src/common/cloudinary.service';
 import { Rol } from 'src/common/roles.enum';
 import { Role } from './entities/role.entity';
 import { MailService } from 'src/common/mail.service';
+import { UpdateUserAdminDto } from './dtos/UpdateUserAdmin.dto';
 
 @Injectable()
 export class UsersService {
@@ -60,6 +61,7 @@ export class UsersService {
       );
     }
   }
+
   async getUserProfile(
     id: string,
   ): Promise<Omit<User, 'password' | 'roles' | 'isActive'>> {
@@ -125,7 +127,7 @@ export class UsersService {
       });
       // Save user in database
       await queryRunner.manager.save(newUser);
-      await this.mailService.sendRegistrationEmail(newUser.email);
+      // await this.mailService.sendRegistrationEmail(newUser.email);
       await queryRunner.commitTransaction();
       // Return only userWithoutPassword
       const {
@@ -229,7 +231,66 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
+  async updateAdmin(userNewData: UpdateUserAdminDto, id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+    try {
+      // Search user
+      const user = await this.usersRepository.findOne({ where: { id } });
+      if (!user) {
+        throw new BadRequestException(
+          'No se encontro ningún usuario que actualizar.',
+        );
+      }
+      const updatedUser = { ...user, ...userNewData };
+
+      await queryRunner.manager.update(User, { id }, updatedUser);
+      await queryRunner.commitTransaction();
+      return {
+        message: 'Datos actualizados con éxito',
+        user: updatedUser,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(
+        error.message || 'Ocurrió un error al actualizar el usuario',
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   async deleteUser(id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    try {
+      const user = await this.usersRepository.findOne({ where: { id } });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado.');
+      }
+
+      const newEmail = `${user.email}-deleted-${Date.now()}`;
+
+      await queryRunner.manager.update(User, id, {
+        isActive: false,
+        email: newEmail,
+      });
+      await queryRunner.commitTransaction();
+      return { message: 'Cuenta eliminada con éxito' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(
+        error.message || 'Error al eliminar el usuario.',
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async deleteUserAdmin(id: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
 
@@ -304,6 +365,7 @@ export class UsersService {
       );
     }
   }
+
   async postImage(file: Express.Multer.File, id: string) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
