@@ -51,6 +51,7 @@ export class CreateUserDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'Debe coincidir con la contraseña',
+    example: 'Contraseña123@',
   })
   confirmPassword: string;
 

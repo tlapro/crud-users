@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   Body,
   Controller,
@@ -7,6 +8,8 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Req,
+  UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -20,6 +23,7 @@ import { Rol } from 'src/common/roles.enum';
 import { RolesGuard } from 'src/guards/role.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UpdateUserAdminDto } from './dtos/UpdateUserAdmin.dto';
+import { UpdateUserPassword } from './dtos/UpdateUserPassword..dto';
 
 @Controller('users')
 export class UsersController {
@@ -33,12 +37,34 @@ export class UsersController {
   }
 
   @ApiBearerAuth()
+  @Put('changue-password/:id')
+  @UseGuards(AuthGuard)
+  changePassword(
+    @Req() req,
+    @Body() userUpdatePassword: UpdateUserPassword,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    if (req.user.id !== id) {
+      throw new UnauthorizedException(
+        'No tienes permiso para actualizar los datos de otro usuario.',
+      );
+    }
+    return this.usersService.changePassword(userUpdatePassword, id);
+  }
+
+  @ApiBearerAuth()
   @Put('update-data/:id')
   @UseGuards(AuthGuard)
   updateUser(
+    @Req() req,
     @Body() userNewData: UpdateUserDto,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
+    if (req.user.id !== id) {
+      throw new UnauthorizedException(
+        'No tienes permiso para actualizar los datos de otro usuario.',
+      );
+    }
     return this.usersService.updateUser(userNewData, id);
   }
 
@@ -56,7 +82,12 @@ export class UsersController {
   @ApiBearerAuth()
   @Put('delete-user/:id')
   @UseGuards(AuthGuard)
-  deleteUser(@Param('id', ParseUUIDPipe) id: string) {
+  deleteUser(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
+    if (req.user.id !== id) {
+      throw new UnauthorizedException(
+        'No tienes permiso para eliminar a otro usuario.',
+      );
+    }
     return this.usersService.deleteUser(id);
   }
 
@@ -105,22 +136,38 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('image'))
   @UseGuards(AuthGuard)
   postImage(
+    @Req() req,
     @UploadedFile() file: Express.Multer.File,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
+    if (req.user.id !== id) {
+      throw new UnauthorizedException(
+        'No tienes permiso para subir una imagen de perfil a otro usuario.',
+      );
+    }
     return this.usersService.postImage(file, id);
   }
 
   @ApiBearerAuth()
   @Put('profile/deleteimage/:id')
   @UseGuards(AuthGuard)
-  putImage(@Param('id', ParseUUIDPipe) id: string) {
+  putImage(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
+    if (req.user.id !== id) {
+      throw new UnauthorizedException(
+        'No tienes permiso para eliminar la imagen de otro usuario.',
+      );
+    }
     return this.usersService.putImage(id);
   }
 
   @Get('/profile/:id')
   @UseGuards(AuthGuard)
-  getUserProfile(@Param('id', ParseUUIDPipe) id: string) {
+  getUserProfile(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
+    if (req.user.id !== id) {
+      throw new UnauthorizedException(
+        'No tienes permiso para acceder a los datos de perfil de otro usuario.',
+      );
+    }
     return this.usersService.getUserProfile(id);
   }
 }
