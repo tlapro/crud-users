@@ -20,6 +20,7 @@ import { MailService } from 'src/common/mail.service';
 import { UpdateUserAdminDto } from './dtos/UpdateUserAdmin.dto';
 import { UpdateUserPassword } from './dtos/UpdateUserPassword..dto';
 import { AdminChangePassword } from './dtos/AdminChangePassword.dto';
+import { UserResetPassword } from './dtos/UserResetPassword';
 
 @Injectable()
 export class UsersService {
@@ -548,6 +549,75 @@ export class UsersService {
     } catch (error) {
       throw new BadRequestException(
         error.message || ' Ocurrió un error al eliminar la imagen',
+      );
+    }
+  }
+
+  async recoverPassword(email: string) {
+    const user = await this.usersRepository.findOne({
+      where: { email },
+    });
+    if (!user) {
+      throw new BadRequestException(
+        'No existe una cuenta asociada a ese email.',
+      );
+    }
+    const tokenPayload = {
+      sub: user.id,
+      email: user.email,
+    };
+    const token = await this.jwtService.signAsync(tokenPayload, {
+      expiresIn: '15m',
+    });
+    console.log(token);
+    const resetLink = `http://localhost:3000/reset-password?token=${token}`;
+
+    await this.mailService.sendPasswordResetEmail(user.email, resetLink);
+    return {
+      message:
+        'Se ha enviado un correo con la información para actualizar la contraseña.',
+    };
+  }
+
+  async verifyResetToken(token: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync<{ sub: string }>(
+        token,
+        {
+          secret: process.env.JWT_SECRET,
+        },
+      );
+      return { valid: true, userId: payload.sub };
+    } catch (error) {
+      throw new BadRequestException('Token inválido o expirado.');
+    }
+  }
+
+  async resetPassword(token: string, newPasswordData: UserResetPassword) {
+    try {
+      const payload = await this.jwtService.verifyAsync<{ sub: string }>(
+        token,
+        {
+          secret: process.env.JWT_SECRET,
+        },
+      );
+
+      const user = await this.usersRepository.findOne({
+        where: { id: payload.sub },
+      });
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado.');
+      }
+      if (newPasswordData.password !== newPasswordData.confirmPassword) {
+        throw new BadRequestException('Las contraseñas no coinciden.');
+      }
+      user.password = await bcrypt.hash(newPasswordData.password, 10);
+      await this.usersRepository.save(user);
+
+      return { message: 'Contraseña actualizada correctamente.' };
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Token inválido o expirado.',
       );
     }
   }

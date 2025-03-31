@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -25,10 +26,15 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { UpdateUserAdminDto } from './dtos/UpdateUserAdmin.dto';
 import { UpdateUserPassword } from './dtos/UpdateUserPassword..dto';
 import { AdminChangePassword } from './dtos/AdminChangePassword.dto';
+import { JwtService } from '@nestjs/jwt';
+import { UserResetPassword } from './dtos/UserResetPassword';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Get()
   // @Roles(Rol.Admin)
@@ -186,5 +192,22 @@ export class UsersController {
       );
     }
     return this.usersService.getUserProfile(id);
+  }
+
+  @Post('recover-password')
+  recoverPassword(@Body() body: { email: string }) {
+    return this.usersService.recoverPassword(body.email);
+  }
+
+  @Post('verify-reset-token')
+  async verifyResetToken(@Body('token') token: string) {
+    return this.usersService.verifyResetToken(token);
+  }
+  @Post('reset-password')
+  async resetPassword(
+    @Body('token') token: string,
+    @Body('newPasswordData') newPasswordData: UserResetPassword,
+  ) {
+    return this.usersService.resetPassword(token, newPasswordData);
   }
 }
